@@ -1,5 +1,6 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   getActiveRides,
@@ -67,6 +68,12 @@ export default function ActiveRidesScreen() {
                   <Text style={styles.metaLabel}>Cena</Text>
                   <Text style={styles.metaValue}>{item.pricePerHour} RSD / sat</Text>
                 </View>
+
+                <Pressable
+                  onPress={() => router.push({ pathname: '/end_ride', params: { rideId: item.id } })}
+                  style={({ pressed }) => [styles.endButton, pressed && styles.pressed]}>
+                  <Text style={styles.endButtonText}>Završi vožnju</Text>
+                </Pressable>
               </View>
             );
           }}
@@ -117,6 +124,15 @@ const styles = StyleSheet.create({
   },
   metaLabel: { color: '#4a4a4a', fontSize: 14 },
   metaValue: { color: '#000', fontSize: 14, fontWeight: '600' },
+  endButton: {
+    marginTop: 4,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#2e7d32',
+  },
+  endButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  pressed: { opacity: 0.8 },
   emptyBox: {
     marginTop: 40,
     alignItems: 'center',

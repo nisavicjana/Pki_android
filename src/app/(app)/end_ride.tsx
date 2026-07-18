@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -30,9 +31,11 @@ function distanceMeters(a: Coords, b: Coords) {
 }
 
 export default function EndRideScreen() {
+  const { rideId } = useLocalSearchParams<{ rideId?: string }>();
   const [bikeDropdownOpen, setBikeDropdownOpen] = useState(false);
   const [parkingDropdownOpen, setParkingDropdownOpen] = useState(false);
   const [activeRides, setActiveRidesState] = useState<ActiveRide[]>([]);
+  const [ridesLoaded, setRidesLoaded] = useState(false);
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
   const [selectedRide, setSelectedRide] = useState<ActiveRide | null>(null);
   const [selectedParking, setSelectedParking] = useState<ParkingSpot | null>(null);
@@ -47,10 +50,16 @@ export default function EndRideScreen() {
         getActiveRides(),
         getParkingSpots(),
       ]);
-      setActiveRidesState(rides.filter((r) => !uid || r.userId === uid));
+      const userRides = rides.filter((r) => !uid || r.userId === uid);
+      setActiveRidesState(userRides);
+      setRidesLoaded(true);
       setParkingSpots(spots);
+      if (rideId) {
+        const preselected = userRides.find((r) => r.id === rideId);
+        if (preselected) setSelectedRide(preselected);
+      }
     })();
-  }, []);
+  }, [rideId]);
 
   useEffect(() => {
     void (async () => {
@@ -177,6 +186,15 @@ export default function EndRideScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Završi vožnju</Text>
 
+      {ridesLoaded && activeRides.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>Nemate aktivnih vožnji.</Text>
+          <Text style={styles.emptySubtext}>
+            Započnite vožnju da biste je kasnije mogli završiti ovde.
+          </Text>
+        </View>
+      ) : (
+        <>
       <Text style={styles.label}>Bicikl</Text>
       <Pressable
         onPress={() => setBikeDropdownOpen(true)}
@@ -310,12 +328,21 @@ export default function EndRideScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+        </>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { padding: 24, gap: 12 },
+  emptyBox: {
+    marginTop: 48,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyText: { color: '#1f2a1a', fontSize: 18, fontWeight: '700' },
+  emptySubtext: { color: '#4a4a4a', fontSize: 14, textAlign: 'center' },
   title: {
     fontSize: 24,
     fontWeight: '700',
