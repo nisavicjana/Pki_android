@@ -1,129 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-type Bike = {
-  id: string;
-  name: string;
-  battery: number;
-  location: string;
-  address: string;
-  imageUrl: string;
-  pricePerHour: number;
-  available: boolean;
-  latitude: number;
-  longitude: number;
-};
-
-type ParkingSpot = {
-  id: string;
-  name: string;
-  address: string;
-  capacity: number;
-  available: number;
-  hours: string;
-  latitude: number;
-  longitude: number;
-};
-
-const BIKE_IMAGE =
-  'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=600&auto=format&fit=crop';
-
-const BIKES: Bike[] = [
-  {
-    id: 'BK-001',
-    name: 'Cerak 1',
-    battery: 92,
-    location: 'Cerak Vinogradi',
-    address: 'Ulica Cerska 12, Cerak Vinogradi',
-    imageUrl: BIKE_IMAGE,
-    pricePerHour: 150,
-    available: true,
-    latitude: 44.7681,
-    longitude: 20.4149,
-  },
-  {
-    id: 'BK-002',
-    name: 'Cerak 2',
-    battery: 65,
-    location: 'OŠ Vladislav Ribnikar',
-    address: 'Trg Slavija bb, Cerak',
-    imageUrl: BIKE_IMAGE,
-    pricePerHour: 120,
-    available: false,
-    latitude: 44.7655,
-    longitude: 20.4192,
-  },
-  {
-    id: 'BK-003',
-    name: 'Cerak 3',
-    battery: 80,
-    location: 'Cerak Park',
-    address: 'Park Cerak, ulaz 2',
-    imageUrl: BIKE_IMAGE,
-    pricePerHour: 180,
-    available: true,
-    latitude: 44.7702,
-    longitude: 20.4205,
-  },
-  {
-    id: 'BK-004',
-    name: 'Cerak 4',
-    battery: 45,
-    location: 'Ibarska magistrala',
-    address: 'Ibarska magistrala 34',
-    imageUrl: BIKE_IMAGE,
-    pricePerHour: 100,
-    available: true,
-    latitude: 44.7638,
-    longitude: 20.4118,
-  },
-  {
-    id: 'BK-005',
-    name: 'Cerak 5',
-    battery: 100,
-    location: 'Cerak Market',
-    address: 'Pijaca Cerak, ulaz A',
-    imageUrl: BIKE_IMAGE,
-    pricePerHour: 150,
-    available: true,
-    latitude: 44.7690,
-    longitude: 20.4098,
-  },
-];
-
-const PARKING_SPOTS: ParkingSpot[] = [
-  {
-    id: 'PK-01',
-    name: 'Cerak Vinogradi Parking',
-    address: 'Ulica Cerska 20, Cerak Vinogradi',
-    capacity: 20,
-    available: 7,
-    hours: '00:00 – 24:00',
-    latitude: 44.7695,
-    longitude: 20.4165,
-  },
-  {
-    id: 'PK-02',
-    name: 'Cerak Center Parking',
-    address: 'Trg Cerak 3',
-    capacity: 15,
-    available: 3,
-    hours: '06:00 – 22:00',
-    latitude: 44.7660,
-    longitude: 20.4130,
-  },
-  {
-    id: 'PK-03',
-    name: 'Cerak Park Parking',
-    address: 'Park Cerak, ulaz 1',
-    capacity: 10,
-    available: 10,
-    hours: '00:00 – 24:00',
-    latitude: 44.7715,
-    longitude: 20.4220,
-  },
-];
+import { getBikes, getParkingSpots, type Bike, type ParkingSpot } from '@/data/storage';
 
 function buildHtml(bikes: Bike[], parkingSpots: ParkingSpot[]) {
   const bikesJson = JSON.stringify(bikes);
@@ -219,14 +98,38 @@ function distanceKm(a: { latitude: number; longitude: number }, b: { latitude: n
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-function findNearestParking(bike: Bike): { spot: ParkingSpot; distanceKm: number } | null {
-  if (PARKING_SPOTS.length === 0) return null;
-  let best = { spot: PARKING_SPOTS[0], distanceKm: distanceKm(bike, PARKING_SPOTS[0]) };
-  for (let i = 1; i < PARKING_SPOTS.length; i++) {
-    const d = distanceKm(bike, PARKING_SPOTS[i]);
-    if (d < best.distanceKm) best = { spot: PARKING_SPOTS[i], distanceKm: d };
+function findNearestParking(bike: Bike, spots: ParkingSpot[]): { spot: ParkingSpot; distanceKm: number } | null {
+  if (spots.length === 0) return null;
+  let best = { spot: spots[0], distanceKm: distanceKm(bike, spots[0]) };
+  for (let i = 1; i < spots.length; i++) {
+    const d = distanceKm(bike, spots[i]);
+    if (d < best.distanceKm) best = { spot: spots[i], distanceKm: d };
   }
   return best;
+}
+
+async function reverseGeocode(latitude: number, longitude: number): Promise<string | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`;
+    const res = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'CerakBikeApp/1.0 (reverse geocoding for parking pins)',
+      },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      display_name?: string;
+      address?: Record<string, string>;
+    };
+    const a = data.address ?? {};
+    const street = a.road ?? a.pedestrian ?? a.footway ?? a.neighbourhood ?? a.suburb;
+    const city = a.city ?? a.town ?? a.village ?? a.municipality ?? a.county;
+    const short = [street, city].filter(Boolean).join(', ');
+    return short || data.display_name || null;
+  } catch {
+    return null;
+  }
 }
 
 type Selection =
@@ -236,7 +139,42 @@ type Selection =
 
 export default function MapScreen() {
   const [selected, setSelected] = useState<Selection>(null);
-  const html = useMemo(() => buildHtml(BIKES, PARKING_SPOTS), []);
+  const [bikes, setBikes] = useState<Bike[]>([]);
+  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      const [b, p] = await Promise.all([getBikes(), getParkingSpots()]);
+      setBikes(b);
+      setParkingSpots(p);
+    })();
+  }, []);
+
+  const selectedCoords =
+    selected?.kind === 'bike'
+      ? { latitude: selected.bike.latitude, longitude: selected.bike.longitude }
+      : selected?.kind === 'parking'
+      ? { latitude: selected.parking.latitude, longitude: selected.parking.longitude }
+      : null;
+
+  useEffect(() => {
+    if (!selectedCoords) {
+      setResolvedAddress(null);
+      return;
+    }
+    let cancelled = false;
+    setResolvedAddress(null);
+    void (async () => {
+      const address = await reverseGeocode(selectedCoords.latitude, selectedCoords.longitude);
+      if (!cancelled) setResolvedAddress(address);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCoords?.latitude, selectedCoords?.longitude]);
+
+  const html = useMemo(() => buildHtml(bikes, parkingSpots), [bikes, parkingSpots]);
 
   const handleMessage = (event: { nativeEvent: { data: string } }) => {
     try {
@@ -255,7 +193,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Available bikes</Text>
+      <Text style={styles.title}>Dostupni bicikli</Text>
       <View style={styles.mapCard}>
         <WebView
           style={styles.map}
@@ -268,16 +206,16 @@ export default function MapScreen() {
       </View>
 
       <View style={styles.instructions}>
-        <Text style={styles.instructionsTitle}>How to use the map</Text>
-        <Text style={styles.instructionsItem}>• Drag the map to move around Cerak.</Text>
-        <Text style={styles.instructionsItem}>• Pinch or use the +/- buttons to zoom in and out.</Text>
+        <Text style={styles.instructionsTitle}>Kako koristiti mapu</Text>
+        <Text style={styles.instructionsItem}>• Prevucite mapu da se krećete po Čeraku.</Text>
+        <Text style={styles.instructionsItem}>• Skupite prste ili koristite +/- dugmad za uvećanje i umanjenje.</Text>
         <Text style={styles.instructionsItem}>
-          • <Text style={styles.bikeDot}>●</Text> Blue pins are available bikes — tap for details.
+          • <Text style={styles.bikeDot}>●</Text> Plavi markeri su dostupni bicikli, dodirnite za detalje.
         </Text>
         <Text style={styles.instructionsItem}>
-          • <Text style={styles.parkingDot}>●</Text> Orange pins are parking spots — tap to see capacity.
+          • <Text style={styles.parkingDot}>●</Text> Narandžasti markeri su parking mesta, dodirnite da vidite kapacitet.
         </Text>
-        <Text style={styles.instructionsItem}>• Tap Close to dismiss the details popup.</Text>
+        <Text style={styles.instructionsItem}>• Dodirnite Zatvori da zatvorite prozor sa detaljima.</Text>
       </View>
 
       <Modal visible={selected !== null} transparent animationType="fade" onRequestClose={close}>
@@ -285,7 +223,7 @@ export default function MapScreen() {
           <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
             {selected?.kind === 'bike' && (() => {
               const bike = selected.bike;
-              const nearest = findNearestParking(bike);
+              const nearest = findNearestParking(bike, parkingSpots);
               return (
                 <ScrollView contentContainerStyle={styles.cardScroll}>
                   <Text style={styles.cardTitle}>{bike.name}</Text>
@@ -294,18 +232,18 @@ export default function MapScreen() {
 
                   <View style={[styles.statusBadge, bike.available ? styles.badgeAvailable : styles.badgeUnavailable]}>
                     <Text style={styles.statusBadgeText}>
-                      {bike.available ? 'Available' : 'Not available'}
+                      {bike.available ? 'Dostupan' : 'Nedostupan'}
                     </Text>
                   </View>
 
-                  <Row label="Address" value={bike.address} />
-                  <Row label="Price" value={`${bike.pricePerHour} RSD / hour`} />
+                  <Row label="Adresa" value={resolvedAddress ?? 'Učitavanje adrese…'} />
+                  <Row label="Cena" value={`${bike.pricePerHour} RSD / sat`} />
                   <Row
-                    label="Nearest parking"
+                    label="Najbliži parking"
                     value={
                       nearest
                         ? `${nearest.spot.name} (${nearest.distanceKm.toFixed(2)} km)`
-                        : 'None available'
+                        : 'Nema dostupnih'
                     }
                   />
 
@@ -313,7 +251,7 @@ export default function MapScreen() {
                     <Pressable
                       onPress={close}
                       style={({ pressed }) => [styles.button, styles.secondary, pressed && styles.pressed]}>
-                      <Text style={styles.secondaryText}>Close</Text>
+                      <Text style={styles.secondaryText}>Zatvori</Text>
                     </Pressable>
                   </View>
                 </ScrollView>
@@ -325,10 +263,10 @@ export default function MapScreen() {
               const occupancy = parking.capacity - parking.available;
               const status =
                 parking.available === 0
-                  ? { label: 'Full', style: styles.badgeUnavailable }
+                  ? { label: 'Popunjeno', style: styles.badgeUnavailable }
                   : parking.available <= parking.capacity * 0.25
-                  ? { label: 'Almost full', style: styles.badgeWarning }
-                  : { label: 'Available', style: styles.badgeAvailable };
+                  ? { label: 'Skoro popunjeno', style: styles.badgeWarning }
+                  : { label: 'Dostupno', style: styles.badgeAvailable };
               return (
                 <ScrollView contentContainerStyle={styles.cardScroll}>
                   <Text style={styles.cardTitle}>{parking.name}</Text>
@@ -337,18 +275,18 @@ export default function MapScreen() {
                     <Text style={styles.statusBadgeText}>{status.label}</Text>
                   </View>
 
-                  <Row label="ID" value={parking.id} />
-                  <Row label="Address" value={parking.address} />
-                  <Row label="Capacity" value={String(parking.capacity)} />
-                  <Row label="Occupied" value={String(occupancy)} />
-                  <Row label="Available" value={String(parking.available)} />
-                  <Row label="Hours" value={parking.hours} />
+                  <Row label="ID " value={parking.id} />
+                  <Row label="Adresa " value={resolvedAddress ?? 'Učitavanje adrese…'} />
+                  <Row label="Kapacitet " value={String(parking.capacity)} />
+                  <Row label="Zauzeto " value={String(occupancy)} />
+                  <Row label="Slobodno " value={String(parking.available)} />
+                  <Row label="Radno vreme " value={parking.hours} />
 
                   <View style={styles.actions}>
                     <Pressable
                       onPress={close}
                       style={({ pressed }) => [styles.button, styles.secondary, pressed && styles.pressed]}>
-                      <Text style={styles.secondaryText}>Close</Text>
+                      <Text style={styles.secondaryText}>Zatvori</Text>
                     </Pressable>
                   </View>
                 </ScrollView>
@@ -379,7 +317,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   mapCard: {
-    height: 400,
+    flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,

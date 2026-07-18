@@ -1,31 +1,17 @@
 import * as ImagePicker from 'expo-image-picker';
-import * as Notifications from 'expo-notifications';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
 
 export default function ReportProblemDetailsScreen() {
   const { bikeName } = useLocalSearchParams<{ bikeName?: string }>();
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
 
-  useEffect(() => {
-    Notifications.requestPermissionsAsync().catch(() => undefined);
-  }, []);
-
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission required', 'Please allow access to your photos to upload an image.');
+      Alert.alert('Potrebna dozvola', 'Dozvolite pristup fotografijama da biste otpremili sliku.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -37,46 +23,37 @@ export default function ReportProblemDetailsScreen() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!description.trim()) {
-      Alert.alert('Missing description', 'Please describe the problem.');
+      Alert.alert('Opis nedostaje', 'Opišite problem.');
       return;
     }
     if (!imageUri) {
-      Alert.alert('Missing image', 'Please upload a photo of the bike.');
+      Alert.alert('Slika nedostaje', 'Otpremite fotografiju bicikla.');
       return;
     }
 
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Report submitted',
-          body: `Thanks! Your report for ${bikeName ?? 'the bike'} has been received.`,
-          data: { bikeName },
-        },
-        trigger: null,
-      });
-    } catch {
-      // ignore notification errors, still confirm below
-    }
-
-    router.replace('/my_profile');
+    Alert.alert(
+      'Prijava poslata',
+      `Hvala! Vaša prijava za ${bikeName ?? 'bicikl'} je primljena.`,
+      [{ text: 'OK', onPress: () => router.replace('/report_problem') }],
+    );
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Report problem</Text>
+      <Text style={styles.title}>Prijavi problem</Text>
 
       <View style={styles.bikeBadge}>
-        <Text style={styles.bikeBadgeLabel}>Bike</Text>
-        <Text style={styles.bikeBadgeName}>{bikeName ?? 'Unknown'}</Text>
+        <Text style={styles.bikeBadgeLabel}>Bicikl</Text>
+        <Text style={styles.bikeBadgeName}>{bikeName ?? 'Nepoznato'}</Text>
       </View>
 
-      <Text style={styles.label}>Describe the problem</Text>
+      <Text style={styles.label}>Opišite problem</Text>
       <TextInput
         value={description}
         onChangeText={setDescription}
-        placeholder="e.g. Flat rear tire, brakes not working..."
+        placeholder="npr. Ispumpana zadnja guma, kočnice ne rade..."
         placeholderTextColor="#7a7a7a"
         multiline
         numberOfLines={5}
@@ -84,12 +61,11 @@ export default function ReportProblemDetailsScreen() {
         textAlignVertical="top"
       />
 
-      <Text style={styles.label}>Bike photo</Text>
+      <Text style={styles.label}>Fotografija bicikla</Text>
       <Pressable
         onPress={pickImage}
         style={({ pressed }) => [styles.uploadButton, pressed && styles.pressed]}>
-        <Text style={styles.uploadIcon}>📷</Text>
-        <Text style={styles.uploadText}>{imageUri ? 'Change image' : 'Upload bike image'}</Text>
+        <Text style={styles.uploadText}>{imageUri ? 'Promeni sliku' : 'Otpremi sliku bicikla'}</Text>
       </Pressable>
 
       {imageUri && <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />}
@@ -97,7 +73,7 @@ export default function ReportProblemDetailsScreen() {
       <Pressable
         onPress={handleSubmit}
         style={({ pressed }) => [styles.submitButton, pressed && styles.pressed]}>
-        <Text style={styles.submitButtonText}>Submit</Text>
+        <Text style={styles.submitButtonText}>Pošalji</Text>
       </Pressable>
     </ScrollView>
   );
@@ -135,7 +111,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 8,
   },
-  uploadIcon: { fontSize: 20 },
   uploadText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   preview: {
     width: '100%',

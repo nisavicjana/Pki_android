@@ -1,7 +1,8 @@
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, scanFromURLAsync, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function ReportProblemScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -17,6 +18,26 @@ export default function ReportProblemScreen() {
     setCameraOpen(true);
   };
 
+  const pickFromGallery = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 1,
+    });
+    if (result.canceled || result.assets.length === 0) return;
+
+    try {
+      const scans = await scanFromURLAsync(result.assets[0].uri, ['qr']);
+      if (scans.length === 0) {
+        Alert.alert('QR kod nije pronađen', 'Izabrana slika ne sadrži čitljiv QR kod bicikla.');
+        return;
+      }
+      scannedRef.current = false;
+      goToDetails(scans[0].data);
+    } catch {
+      Alert.alert('Skeniranje nije uspelo', 'Nije moguće očitati QR kod sa te slike. Pokušajte sa drugom.');
+    }
+  };
+
   const goToDetails = (bikeName: string) => {
     if (scannedRef.current) return;
     scannedRef.current = true;
@@ -26,20 +47,19 @@ export default function ReportProblemScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Report a problem</Text>
-      <Text style={styles.subtitle}>Scan the QR code on the bike you want to report.</Text>
+      <Text style={styles.title}>Prijavi problem</Text>
+      <Text style={styles.subtitle}>Skenirajte QR kod na biciklu koji želite da prijavite.</Text>
 
       <Pressable
         onPress={openCamera}
         style={({ pressed }) => [styles.cameraButton, pressed && styles.pressed]}>
-        <Text style={styles.cameraIcon}>📷</Text>
-        <Text style={styles.cameraButtonText}>Take photo of QR</Text>
+        <Text style={styles.cameraButtonText}>Slikaj QR kod</Text>
       </Pressable>
 
       <Pressable
-        onPress={() => goToDetails('Cerak 1')}
-        style={({ pressed }) => [styles.mockButton, pressed && styles.pressed]}>
-        <Text style={styles.mockButtonText}>Simulate successful scan</Text>
+        onPress={pickFromGallery}
+        style={({ pressed }) => [styles.galleryButton, pressed && styles.pressed]}>
+        <Text style={styles.galleryButtonText}>Izaberi QR iz galerije</Text>
       </Pressable>
 
       <Modal
@@ -48,7 +68,7 @@ export default function ReportProblemScreen() {
         onRequestClose={() => setCameraOpen(false)}>
         <View style={styles.cameraScreen}>
           <CameraView
-            style={StyleSheet.absoluteFillObject}
+            style={styles.cameraFill}
             facing="back"
             barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
             onBarcodeScanned={({ data }) => goToDetails(data)}
@@ -56,14 +76,19 @@ export default function ReportProblemScreen() {
 
           <View style={styles.scanFrameWrapper} pointerEvents="none">
             <View style={styles.scanFrame} />
-            <Text style={styles.scanHint}>Align the QR code inside the frame</Text>
+            <Text style={styles.scanHint}>Poravnajte QR kod unutar okvira</Text>
           </View>
 
           <View style={styles.cameraOverlay}>
             <Pressable
+              onPress={pickFromGallery}
+              style={({ pressed }) => [styles.overlayButton, pressed && styles.pressed]}>
+              <Text style={styles.overlayButtonText}>Galerija</Text>
+            </Pressable>
+            <Pressable
               onPress={() => setCameraOpen(false)}
-              style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}>
-              <Text style={styles.closeButtonText}>Close</Text>
+              style={({ pressed }) => [styles.overlayButton, pressed && styles.pressed]}>
+              <Text style={styles.overlayButtonText}>Zatvori</Text>
             </Pressable>
           </View>
         </View>
@@ -85,9 +110,8 @@ const styles = StyleSheet.create({
     gap: 6,
     minWidth: 220,
   },
-  cameraIcon: { fontSize: 40 },
   cameraButtonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  mockButton: {
+  galleryButton: {
     marginTop: 4,
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -95,26 +119,41 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#7aa6c6',
     backgroundColor: 'transparent',
+    minWidth: 220,
+    alignItems: 'center',
   },
-  mockButtonText: { color: '#7aa6c6', fontSize: 15, fontWeight: '600' },
+  galleryButtonText: { color: '#7aa6c6', fontSize: 15, fontWeight: '600' },
   pressed: { opacity: 0.8 },
   cameraScreen: { flex: 1, backgroundColor: '#000' },
+  cameraFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   cameraOverlay: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 40,
-    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
   },
-  closeButton: {
+  overlayButton: {
     backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 999,
   },
-  closeButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  overlayButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   scanFrameWrapper: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },

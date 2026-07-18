@@ -1,20 +1,7 @@
+import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
-type RideHistoryEntry = {
-  id: string;
-  bikeName: string;
-  date: string;
-  amountPaid: number;
-};
-
-const HISTORY: RideHistoryEntry[] = [
-  { id: 'HR-01', bikeName: 'Cerak 1', date: '2026-07-06', amountPaid: 225.5 },
-  { id: 'HR-02', bikeName: 'Cerak 3', date: '2026-07-05', amountPaid: 540.0 },
-  { id: 'HR-03', bikeName: 'Cerak 2', date: '2026-07-04', amountPaid: 120.0 },
-  { id: 'HR-04', bikeName: 'Cerak 5', date: '2026-07-01', amountPaid: 375.0 },
-  { id: 'HR-05', bikeName: 'Cerak 4', date: '2026-06-28', amountPaid: 100.0 },
-  { id: 'HR-06', bikeName: 'Cerak 1', date: '2026-06-25', amountPaid: 300.0 },
-];
+import { getCurrentUserId, getRideHistory, type RideHistoryEntry } from '@/data/storage';
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -23,17 +10,26 @@ function formatDate(iso: string) {
 }
 
 export default function RideHistoryScreen() {
+  const [history, setHistory] = useState<RideHistoryEntry[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      const [uid, all] = await Promise.all([getCurrentUserId(), getRideHistory()]);
+      setHistory(all.filter((r) => !uid || r.userId === uid));
+    })();
+  }, []);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Ride history</Text>
+      <Text style={styles.title}>Istorija vožnji</Text>
 
-      {HISTORY.length === 0 ? (
+      {history.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>No rides yet.</Text>
+          <Text style={styles.emptyText}>Još nema vožnji.</Text>
         </View>
       ) : (
         <FlatList
-          data={HISTORY}
+          data={history}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (

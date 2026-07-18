@@ -1,18 +1,11 @@
-import { useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 
-type ActiveRide = {
-  id: string;
-  bikeName: string;
-  pricePerHour: number;
-  startedAt: number;
-};
-
-const INITIAL_RIDES: ActiveRide[] = [
-  { id: 'RD-01', bikeName: 'Cerak 1', pricePerHour: 150, startedAt: Date.now() - 42 * 60 * 1000 },
-  { id: 'RD-02', bikeName: 'Cerak 3', pricePerHour: 180, startedAt: Date.now() - 12 * 60 * 1000 },
-  { id: 'RD-03', bikeName: 'Cerak 5', pricePerHour: 150, startedAt: Date.now() - 5 * 60 * 1000 },
-];
+import {
+  getActiveRides,
+  getCurrentUserId,
+  type ActiveRide,
+} from '@/data/storage';
 
 function formatDuration(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -33,32 +26,23 @@ function accumulatedPrice(ride: ActiveRide, now: number) {
 }
 
 export default function ActiveRidesScreen() {
-  const [rides, setRides] = useState<ActiveRide[]>(INITIAL_RIDES);
+  const [rides, setRides] = useState<ActiveRide[]>([]);
   const [now] = useState(() => Date.now());
 
-  const finishRide = (ride: ActiveRide) => {
-    const total = accumulatedPrice(ride, now);
-    Alert.alert(
-      'Finish ride',
-      `End the ride for ${ride.bikeName}?\nTotal: ${total.toFixed(2)} RSD`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Finish',
-          style: 'destructive',
-          onPress: () => setRides((prev) => prev.filter((r) => r.id !== ride.id)),
-        },
-      ],
-    );
-  };
+  useEffect(() => {
+    void (async () => {
+      const [uid, all] = await Promise.all([getCurrentUserId(), getActiveRides()]);
+      setRides(all.filter((r) => !uid || r.userId === uid));
+    })();
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Active rides</Text>
+      <Text style={styles.title}>Aktivne vožnje</Text>
 
       {rides.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>You have no active rides.</Text>
+          <Text style={styles.emptyText}>Nemate aktivnih vožnji.</Text>
         </View>
       ) : (
         <FlatList
@@ -76,19 +60,13 @@ export default function ActiveRidesScreen() {
                 </View>
 
                 <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>Duration</Text>
+                  <Text style={styles.metaLabel}>Trajanje</Text>
                   <Text style={styles.metaValue}>{formatDuration(elapsed)}</Text>
                 </View>
                 <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>Rate</Text>
-                  <Text style={styles.metaValue}>{item.pricePerHour} RSD / hour</Text>
+                  <Text style={styles.metaLabel}>Cena</Text>
+                  <Text style={styles.metaValue}>{item.pricePerHour} RSD / sat</Text>
                 </View>
-
-                <Pressable
-                  onPress={() => finishRide(item)}
-                  style={({ pressed }) => [styles.finishButton, pressed && styles.pressed]}>
-                  <Text style={styles.finishButtonText}>Finish ride</Text>
-                </Pressable>
               </View>
             );
           }}
@@ -139,15 +117,6 @@ const styles = StyleSheet.create({
   },
   metaLabel: { color: '#4a4a4a', fontSize: 14 },
   metaValue: { color: '#000', fontSize: 14, fontWeight: '600' },
-  finishButton: {
-    marginTop: 8,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: '#b00020',
-  },
-  finishButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  pressed: { opacity: 0.8 },
   emptyBox: {
     marginTop: 40,
     alignItems: 'center',

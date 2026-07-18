@@ -47,7 +47,12 @@
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to photograph a bike."
         }
       ],
-      "expo-notifications"
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to verify you are near a parking spot when ending a ride."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

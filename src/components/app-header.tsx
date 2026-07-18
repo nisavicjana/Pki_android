@@ -3,25 +3,36 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const HEADER_BG = '#7aa6c6';
+import { clearCurrentUserId } from '@/data/storage';
+
+const HEADER_BG = '#3E6E8E';
+const HEADER_ACCENT = '#B2DE7D';
 
 type MenuOption = {
   label: string;
   onPress: () => void;
+  destructive?: boolean;
 };
 
 export function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const options: MenuOption[] = [
-    { label: 'Map', onPress: () => router.push('/map') },
-    { label: 'Start Ride', onPress: () => router.push('/start_ride') },
-    { label: 'End Ride', onPress: () => router.push('/end_ride') },
-    { label: 'Report Problem', onPress: () => router.push('/report_problem') },
-    { label: 'Active Rides', onPress: () => router.push('/active_rides') },
-    { label: 'Ride History', onPress: () => router.push('/history_ride') },
-    { label: 'My Profile', onPress: () => router.push('/my_profile') },
-    { label: 'Logout', onPress: () => router.replace('/login') },
+    { label: 'Mapa', onPress: () => router.push('/map') },
+    { label: 'Započni vožnju', onPress: () => router.push('/start_ride') },
+    { label: 'Završi vožnju', onPress: () => router.push('/end_ride') },
+    { label: 'Prijavi problem', onPress: () => router.push('/report_problem') },
+    { label: 'Aktivne vožnje', onPress: () => router.push('/active_rides') },
+    { label: 'Istorija vožnji', onPress: () => router.push('/history_ride') },
+    { label: 'Moj profil', onPress: () => router.push('/my_profile') },
+    {
+      label: 'Odjava',
+      destructive: true,
+      onPress: () => {
+        void clearCurrentUserId();
+        router.replace('/login');
+      },
+    },
   ];
 
   const handleSelect = (option: MenuOption) => {
@@ -32,17 +43,26 @@ export function AppHeader() {
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <View style={styles.header}>
-        <Text style={styles.title}>Explore Serbia with bike</Text>
+        <View style={styles.brand}>
+          <View style={styles.logoMark}>
+            <Text style={styles.logoGlyph}>ES</Text>
+          </View>
+          <View style={styles.brandText}>
+            <Text style={styles.title}>Istrazi Srbiju</Text>
+            <Text style={styles.subtitle}>biciklom</Text>
+          </View>
+        </View>
 
         <Pressable
           onPress={() => setMenuOpen(true)}
           hitSlop={10}
-          style={({ pressed }) => [styles.menuButton, pressed && styles.pressed]}>
+          style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]}>
           <View style={styles.bar} />
           <View style={styles.bar} />
           <View style={styles.bar} />
         </Pressable>
       </View>
+      <View style={styles.accentStripe} />
 
       <Modal
         visible={menuOpen}
@@ -55,8 +75,11 @@ export function AppHeader() {
               <TouchableOpacity
                 key={option.label}
                 onPress={() => handleSelect(option)}
+                activeOpacity={0.7}
                 style={[styles.option, idx < options.length - 1 && styles.optionDivider]}>
-                <Text style={styles.optionText}>{option.label}</Text>
+                <Text style={[styles.optionText, option.destructive && styles.optionTextDestructive]}>
+                  {option.label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -75,55 +98,102 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     backgroundColor: HEADER_BG,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  logoMark: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: HEADER_ACCENT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoGlyph: {
+    fontSize: 22,
+  },
+  brandText: {
+    flexShrink: 1,
   },
   title: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    flex: 1,
+    letterSpacing: 0.3,
+  },
+  subtitle: {
+    color: '#d9e6f0',
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 0.4,
+    marginTop: 1,
   },
   menuButton: {
-    padding: 6,
+    padding: 8,
+    borderRadius: 8,
     justifyContent: 'space-between',
-    height: 24,
-    width: 28,
+    height: 32,
+    width: 36,
   },
-  pressed: { opacity: 0.6 },
+  menuButtonPressed: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
   bar: {
-    height: 3,
+    height: 2.5,
     backgroundColor: '#ffffff',
     borderRadius: 2,
   },
+  accentStripe: {
+    height: 3,
+    backgroundColor: HEADER_ACCENT,
+  },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    paddingTop: 70,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingTop: 78,
     paddingRight: 12,
     alignItems: 'flex-end',
   },
   dropdown: {
     backgroundColor: '#ffffff',
-    borderRadius: 10,
-    minWidth: 180,
-    paddingVertical: 4,
-    elevation: 6,
+    borderRadius: 12,
+    minWidth: 220,
+    paddingVertical: 6,
+    elevation: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   optionDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#eaeaea',
   },
   optionText: {
     fontSize: 15,
-    color: '#000000',
+    color: '#1f2a1a',
+    fontWeight: '500',
+  },
+  optionTextDestructive: {
+    color: '#b00020',
+    fontWeight: '600',
   },
 });
