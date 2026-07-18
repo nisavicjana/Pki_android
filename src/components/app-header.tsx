@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { clearCurrentUserId } from '@/data/storage';
@@ -45,7 +45,11 @@ export function AppHeader() {
       <View style={styles.header}>
         <View style={styles.brand}>
           <View style={styles.logoMark}>
-            <Text style={styles.logoGlyph}>ES</Text>
+            <Image
+              source={require('../../assets/images/bike_logo.jpg')}
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
           </View>
           <View style={styles.brandText}>
             <Text style={styles.title}>Istrazi Srbiju</Text>
@@ -119,9 +123,11 @@ const styles = StyleSheet.create({
     backgroundColor: HEADER_ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  logoGlyph: {
-    fontSize: 22,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   brandText: {
     flexShrink: 1,

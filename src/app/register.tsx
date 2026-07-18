@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router } from 'expo-router';
 
@@ -49,7 +49,11 @@ export default function RegisterScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.brand}>
           <View style={styles.logoMark}>
-            <Text style={styles.logoGlyph}>ES</Text>
+            <Image
+              source={require('../../assets/images/bike_logo.jpg')}
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
           </View>
           <Text style={styles.brandTitle}>Istrazi Srbiju</Text>
           <Text style={styles.brandSubtitle}>biciklom</Text>
@@ -160,9 +164,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    overflow: 'hidden',
   },
-  logoGlyph: {
-    fontSize: 40,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   brandTitle: {
     color: '#1f2a1a',
