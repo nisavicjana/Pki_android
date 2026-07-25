@@ -285,19 +285,16 @@ export default function MapScreen() {
       </View>
 
       <View style={styles.instructions}>
-        <Text style={styles.instructionsTitle}>Kako koristiti mapu</Text>
-        <Text style={styles.instructionsItem}>• Prevucite mapu da se krećete po Čeraku.</Text>
-        <Text style={styles.instructionsItem}>• Skupite prste ili koristite +/- dugmad za uvećanje i umanjenje.</Text>
         <Text style={styles.instructionsItem}>
-          • <Text style={styles.bikeDot}>●</Text> Plavi markeri su dostupni bicikli, dodirnite za detalje.
+          Plavi markeri su dostupni bicikli, dodirnite za detalje.
         </Text>
         <Text style={styles.instructionsItem}>
-          • <Text style={styles.parkingDot}>●</Text> Narandžasti markeri su parking mesta, dodirnite da vidite kapacitet.
+         Narandžasti markeri su parking mesta, dodirnite da vidite kapacitet.
         </Text>
         <Text style={styles.instructionsItem}>
-          • <Text style={styles.userDot}>●</Text> Plava tačka je vaša trenutna lokacija; mapa je prati.
+          Plava tačka je vaša trenutna lokacija; mapa je prati.
         </Text>
-        <Text style={styles.instructionsItem}>• Dodirnite Zatvori da zatvorite prozor sa detaljima.</Text>
+
       </View>
 
       <Modal visible={selected !== null} transparent animationType="fade" onRequestClose={close}>
