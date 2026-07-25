@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import * as Location from 'expo-location';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -36,6 +37,14 @@ function buildHtml(bikes: Bike[], parkingSpots: ParkingSpot[]) {
       .bike-pin { background: #7aa6c6; }
       .parking-pin { background: #e08a2b; }
       .parking-pin span { font-size: 15px; }
+      .user-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #1a73e8;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 4px rgba(26,115,232,0.25);
+      }
     </style>
   </head>
   <body>
@@ -61,6 +70,28 @@ function buildHtml(bikes: Bike[], parkingSpots: ParkingSpot[]) {
         iconSize: [28, 28],
         iconAnchor: [14, 28]
       });
+
+      var userIcon = L.divIcon({
+        className: '',
+        html: '<div class="user-dot"></div>',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9]
+      });
+
+      var userMarker = null;
+      var hasCenteredOnUser = false;
+      window.updateUserLocation = function (lat, lng, follow) {
+        if (userMarker) {
+          userMarker.setLatLng([lat, lng]);
+        } else {
+          userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+          userMarker.bindPopup('Vaša lokacija');
+        }
+        if (follow || !hasCenteredOnUser) {
+          map.setView([lat, lng], Math.max(map.getZoom(), 16));
+          hasCenteredOnUser = true;
+        }
+      };
 
       var bikes = ${bikesJson};
       bikes.forEach(function (bike) {
@@ -137,11 +168,16 @@ type Selection =
   | { kind: 'parking'; parking: ParkingSpot }
   | null;
 
+type Coords = { latitude: number; longitude: number };
+
 export default function MapScreen() {
   const [selected, setSelected] = useState<Selection>(null);
   const [bikes, setBikes] = useState<Bike[]>([]);
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
   const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
+  const webViewRef = useRef<WebView>(null);
+  const mapReadyRef = useRef(false);
+  const lastLocationRef = useRef<Coords | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -149,6 +185,42 @@ export default function MapScreen() {
       setBikes(b);
       setParkingSpots(p);
     })();
+  }, []);
+
+  const pushLocationToMap = (coords: Coords, follow: boolean) => {
+    lastLocationRef.current = coords;
+    if (!mapReadyRef.current) return;
+    webViewRef.current?.injectJavaScript(
+      `window.updateUserLocation && window.updateUserLocation(${coords.latitude}, ${coords.longitude}, ${follow}); true;`,
+    );
+  };
+
+  useEffect(() => {
+    let subscription: Location.LocationSubscription | null = null;
+    let cancelled = false;
+    void (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted' || cancelled) return;
+      const initial = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      if (cancelled) return;
+      pushLocationToMap(
+        { latitude: initial.coords.latitude, longitude: initial.coords.longitude },
+        true,
+      );
+      subscription = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 3000 },
+        (pos) => {
+          pushLocationToMap(
+            { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
+            true,
+          );
+        },
+      );
+    })();
+    return () => {
+      cancelled = true;
+      subscription?.remove();
+    };
   }, []);
 
   const selectedCoords =
@@ -196,12 +268,19 @@ export default function MapScreen() {
       <Text style={styles.title}>Dostupni bicikli</Text>
       <View style={styles.mapCard}>
         <WebView
+          ref={webViewRef}
           style={styles.map}
           originWhitelist={['*']}
           source={{ html }}
           javaScriptEnabled
           domStorageEnabled
           onMessage={handleMessage}
+          onLoadEnd={() => {
+            mapReadyRef.current = true;
+            if (lastLocationRef.current) {
+              pushLocationToMap(lastLocationRef.current, true);
+            }
+          }}
         />
       </View>
 
@@ -214,6 +293,9 @@ export default function MapScreen() {
         </Text>
         <Text style={styles.instructionsItem}>
           • <Text style={styles.parkingDot}>●</Text> Narandžasti markeri su parking mesta, dodirnite da vidite kapacitet.
+        </Text>
+        <Text style={styles.instructionsItem}>
+          • <Text style={styles.userDot}>●</Text> Plava tačka je vaša trenutna lokacija; mapa je prati.
         </Text>
         <Text style={styles.instructionsItem}>• Dodirnite Zatvori da zatvorite prozor sa detaljima.</Text>
       </View>
@@ -344,6 +426,7 @@ const styles = StyleSheet.create({
   },
   bikeDot: { color: '#7aa6c6', fontWeight: '700' },
   parkingDot: { color: '#e08a2b', fontWeight: '700' },
+  userDot: { color: '#1a73e8', fontWeight: '700' },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',

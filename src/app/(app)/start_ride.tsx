@@ -125,20 +125,6 @@ export default function StartRideScreen() {
         <Text style={styles.galleryButtonText}>Izaberi QR iz galerije</Text>
       </Pressable>
 
-      {lastRide && (
-        <View style={styles.successBox}>
-          <Text style={styles.successTitle}>Vožnja započeta</Text>
-          <Text style={styles.successText}>Naziv bicikla: {lastRide}</Text>
-        </View>
-      )}
-
-      {lastError && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Vožnja nije započeta</Text>
-          <Text style={styles.errorText}>{lastError}</Text>
-        </View>
-      )}
-
       <Modal
         visible={cameraOpen}
         animationType="slide"
