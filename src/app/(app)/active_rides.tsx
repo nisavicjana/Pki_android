@@ -54,25 +54,16 @@ export default function ActiveRidesScreen() {
             const elapsed = now - item.startedAt;
             const total = accumulatedPrice(item, now);
             return (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
+              <View style={styles.ride}>
+                <View style={styles.rideInfo}>
                   <Text style={styles.bikeName}>{item.bikeName}</Text>
-                  <Text style={styles.price}>{total.toFixed(2)} RSD</Text>
+                  <Text style={styles.details}>{formatDuration(elapsed)}</Text>
                 </View>
-
-                <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>Trajanje</Text>
-                  <Text style={styles.metaValue}>{formatDuration(elapsed)}</Text>
-                </View>
-                <View style={styles.metaRow}>
-                  <Text style={styles.metaLabel}>Cena</Text>
-                  <Text style={styles.metaValue}>{item.pricePerHour} RSD / sat</Text>
-                </View>
-
+                <Text style={styles.price}>{total.toFixed(2)} RSD</Text>
                 <Pressable
                   onPress={() => router.push({ pathname: '/end_ride', params: { rideId: item.id } })}
                   style={({ pressed }) => [styles.endButton, pressed && styles.pressed]}>
-                  <Text style={styles.endButtonText}>Završi vožnju</Text>
+                  <Text style={styles.endButtonText}>Završi</Text>
                 </Pressable>
               </View>
             );
@@ -84,54 +75,41 @@ export default function ActiveRidesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
+  container: { flex: 1, padding: 16 },
   title: {
     fontSize: 20,
     fontWeight: '700',
     color: '#000',
-    textAlign: 'center',
+    marginBottom: 20,
   },
-  list: { gap: 12, paddingBottom: 24 },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  cardHeader: {
+  list: { paddingBottom: 24 },
+  ride: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.12)',
   },
+  rideInfo: { flex: 1 },
   bikeName: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#000',
   },
+  details: { marginTop: 3, fontSize: 13, color: '#555' },
   price: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2e7d32',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
   },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  metaLabel: { color: '#4a4a4a', fontSize: 14 },
-  metaValue: { color: '#000', fontSize: 14, fontWeight: '600' },
   endButton: {
-    marginTop: 4,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
-    alignItems: 'center',
     backgroundColor: '#2e7d32',
   },
-  endButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  endButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   pressed: { opacity: 0.8 },
   emptyBox: {
     marginTop: 40,

@@ -119,12 +119,9 @@ export default function EndRideScreen() {
     [parkingWithDistance],
   );
 
-  const nearestTwoParking = useMemo(
-    () => parkingWithDistance.filter(({ distanceM }) => distanceM !== null).slice(0, 2),
-    [parkingWithDistance],
-  );
-
   const bikePickingDisabled = !userLocation || !isNearAnyParking;
+  const parkingPickingDisabled = !ridesLoaded || activeRides.length === 0;
+  const rideActionsDisabled = !userLocation || !isNearAnyParking;
 
   const takePhoto = async () => {
     if (!permission?.granted) {
@@ -278,7 +275,12 @@ export default function EndRideScreen() {
       <Text style={styles.label}>Parking mesto</Text>
       <Pressable
         onPress={() => setParkingDropdownOpen(true)}
-        style={({ pressed }) => [styles.dropdown, pressed && styles.pressed]}>
+        disabled={parkingPickingDisabled}
+        style={({ pressed }) => [
+          styles.dropdown,
+          parkingPickingDisabled && styles.dropdownDisabled,
+          pressed && styles.pressed,
+        ]}>
         <Text style={selectedParking ? styles.dropdownValue : styles.dropdownPlaceholder}>
           {selectedParking ? selectedParking.name : 'Izaberite parking mesto'}
         </Text>
@@ -290,27 +292,19 @@ export default function EndRideScreen() {
         <Text style={styles.locationHint}>Očitavanje vaše lokacije…</Text>
       ) : null}
       {userLocation && !isNearAnyParking ? (
-        <View style={styles.infoBanner}>
-          <Text style={styles.infoBannerText}>
-            Približite se parkingu (manje od {MAX_PARKING_DISTANCE_M} m) da biste parkirali bicikl.
-          </Text>
-          {nearestTwoParking.length > 0 ? (
-            <View style={styles.nearestList}>
-              <Text style={styles.nearestTitle}>Najbliži parkinzi:</Text>
-              {nearestTwoParking.map(({ spot, distanceM }) => (
-                <Text key={spot.id} style={styles.nearestItem}>
-                  • {spot.name}: {Math.round(distanceM as number)} m
-                </Text>
-              ))}
-            </View>
-          ) : null}
-        </View>
+        <Text style={styles.parkingWarning}>
+          Niste u blizini parkinga. Priđite parkingu da biste završili vožnju.
+        </Text>
       ) : null}
-
       <Text style={styles.label}>Fotografija bicikla</Text>
       <Pressable
         onPress={takePhoto}
-        style={({ pressed }) => [styles.uploadButton, pressed && styles.pressed]}>
+        disabled={rideActionsDisabled}
+        style={({ pressed }) => [
+          styles.uploadButton,
+          rideActionsDisabled && styles.actionDisabled,
+          pressed && styles.pressed,
+        ]}>
         <Text style={styles.uploadText}>{imageUri ? 'Promeni sliku' : 'Otvori kameru'}</Text>
       </Pressable>
       <Text style={styles.locationHint}>
@@ -323,7 +317,12 @@ export default function EndRideScreen() {
 
       <Pressable
         onPress={handleEndRide}
-        style={({ pressed }) => [styles.endButton, pressed && styles.pressed]}>
+        disabled={rideActionsDisabled}
+        style={({ pressed }) => [
+          styles.endButton,
+          rideActionsDisabled && styles.actionDisabled,
+          pressed && styles.pressed,
+        ]}>
         <Text style={styles.endButtonText}>Završi vožnju</Text>
       </Pressable>
 
@@ -536,6 +535,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2e7d32',
   },
   endButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  actionDisabled: { opacity: 0.45 },
   pressed: { opacity: 0.8 },
   modalBackdrop: {
     flex: 1,
@@ -568,19 +568,10 @@ const styles = StyleSheet.create({
   distanceInRange: { color: '#2e7d32' },
   distanceOutRange: { color: '#b00020' },
   locationHint: { fontSize: 12, color: '#4a4a4a', marginTop: 4 },
-  infoBanner: {
-    flexDirection: 'column',
-    gap: 6,
-    backgroundColor: '#fff4e0',
-    borderWidth: 1,
-    borderColor: '#e08a2b',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginTop: 8,
+  parkingWarning: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8a3b00',
+    marginTop: 4,
   },
-  infoBannerText: { fontSize: 14, fontWeight: '600', color: '#8a4b00' },
-  nearestList: { gap: 2 },
-  nearestTitle: { fontSize: 13, fontWeight: '700', color: '#8a4b00' },
-  nearestItem: { fontSize: 13, color: '#8a4b00' },
 });
