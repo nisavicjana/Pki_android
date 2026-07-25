@@ -46,7 +46,7 @@ export default function EndRideScreen() {
   const [ridesLoaded, setRidesLoaded] = useState(false);
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
   const [selectedRide, setSelectedRide] = useState<ActiveRide | null>(null);
-  const [selectedParking, setSelectedParking] = useState<ParkingSpot | null>(null);
+  const [selectedParkingOverride, setSelectedParking] = useState<ParkingSpot | null>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<Coords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -110,6 +110,18 @@ export default function EndRideScreen() {
     }
     return withDistance;
   }, [parkingSpots, userLocation]);
+
+  const nearbyParking = useMemo(
+    () =>
+      parkingWithDistance.find(
+        ({ distanceM }) => distanceM !== null && distanceM <= MAX_PARKING_DISTANCE_M,
+      )?.spot ?? null,
+    [parkingWithDistance],
+  );
+
+  const selectedParking =
+    selectedParkingOverride ??
+    (ridesLoaded && activeRides.length > 0 ? nearbyParking : null);
 
   const isNearAnyParking = useMemo(
     () =>
